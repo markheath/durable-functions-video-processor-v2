@@ -12,7 +12,7 @@ namespace VideoProcessor
     {
         [FunctionName("ProcessVideoStarter")]
         public static async Task<HttpResponseMessage> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequestMessage req,
             [OrchestrationClient] DurableOrchestrationClient starter,
             TraceWriter log)
@@ -20,16 +20,10 @@ namespace VideoProcessor
             // parse query parameter
             string video = req.RequestUri.ParseQueryString()["video"];
 
-            // Get request body
-            dynamic data = await req.Content.ReadAsAsync<object>();
-
-            // Set name to query string or body data
-            video = video ?? data?.video;
-
             if (video == null)
             {
                 return req.CreateResponse(HttpStatusCode.BadRequest,
-                   "Please pass the video location the query string or in the request body");
+                   "Please pass the video location the query string");
             }
 
             log.Info($"About to start orchestration for {video}");
