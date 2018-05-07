@@ -17,7 +17,8 @@ namespace VideoProcessor
                             [ActivityTrigger] object input,
                             TraceWriter log)
         {
-            return ConfigurationManager.AppSettings["TranscodeBitrates"]
+            var bitRates = Environment.GetEnvironmentVariable("TranscodeBitrates");
+            return bitRates
                         .Split(',')
                         .Select(int.Parse)
                         .ToArray();
@@ -66,7 +67,7 @@ namespace VideoProcessor
             TraceWriter log)
         {
             log.Info($"Appending intro to video {inputVideo}");
-            var introLocation = ConfigurationManager.AppSettings["IntroLocation"];
+            var introLocation = Environment.GetEnvironmentVariable("IntroLocation");
             // simulate doing the activity
             await Task.Delay(5000);
 
@@ -101,11 +102,11 @@ namespace VideoProcessor
                 RowKey = approvalCode,
                 OrchestrationId = approvalInfo.OrchestrationId
             };
-            var approverEmail = new EmailAddress(ConfigurationManager.AppSettings["ApproverEmail"]);
-            var senderEmail = new EmailAddress(ConfigurationManager.AppSettings["SenderEmail"]);
+            var approverEmail = new EmailAddress(Environment.GetEnvironmentVariable("ApproverEmail"));
+            var senderEmail = new EmailAddress(Environment.GetEnvironmentVariable("SenderEmail"));
             
             log.Info($"Sending approval request for {approvalInfo.VideoLocation}");
-            var host = ConfigurationManager.AppSettings["Host"];
+            var host = Environment.GetEnvironmentVariable("Host");
 
             var functionAddress = $"{host}/api/SubmitVideoApproval/{approvalCode}";
             var approvedLink = functionAddress + "?result=Approved";
