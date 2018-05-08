@@ -1,6 +1,6 @@
 ﻿### Durable Functions Video Processor Demo
 
-This demo shows a very simple video processing workflow using the Azure Durable Functions extension and hosting the
+This demo shows a very simple video processing workflow using the Azure Durable Functions extension and using version 2 of the Azure Functions runtime
 
 To run this locally from Visual Studio you will need to create your own `local.settings.json` file with the following contents (filling in your personal email address and SendGrid key in order to be able to send emails):
 
