@@ -26,6 +26,7 @@ namespace VideoProcessor
             string approvalResult = "Unknown";
             try
             {
+                ctx.SetCustomStatus("transcoding");
                 var transcodeResults =
                     await ctx.CallSubOrchestratorAsync<VideoFileInfo[]>("O_TranscodeVideo", videoLocation);
 
@@ -34,18 +35,21 @@ namespace VideoProcessor
                         .Select(r => r.Location)
                         .First();
 
+                ctx.SetCustomStatus("extracting thumbnail");
                 if (!ctx.IsReplaying)
                     log.Info("About to call extract thumbnail");
 
                 thumbnailLocation = await
                     ctx.CallActivityAsync<string>("A_ExtractThumbnail", transcodedLocation);
 
+                ctx.SetCustomStatus("prepending intro");
                 if (!ctx.IsReplaying)
                     log.Info("About to call prepend intro");
 
                 withIntroLocation = await
                     ctx.CallActivityAsync<string>("A_PrependIntro", transcodedLocation);
 
+                ctx.SetCustomStatus("sending approval request email");
                 await ctx.CallActivityAsync("A_SendApprovalRequestEmail", new ApprovalInfo()
                 {
                     OrchestrationId = ctx.InstanceId,
@@ -58,6 +62,7 @@ namespace VideoProcessor
                     var timeoutTask = ctx.CreateTimer(timeoutAt, cts.Token);
                     var approvalTask = ctx.WaitForExternalEvent<string>("ApprovalResult");
 
+                    ctx.SetCustomStatus("waiting for email response");
                     var winner = await Task.WhenAny(approvalTask, timeoutTask);
                     if (winner == approvalTask)
                     {
@@ -72,21 +77,28 @@ namespace VideoProcessor
 
                 if (approvalResult == "Approved")
                 {
+                    ctx.SetCustomStatus("publishing video");
                     await ctx.CallActivityAsync("A_PublishVideo", withIntroLocation);
                 }
                 else
                 {
+                    ctx.SetCustomStatus("rejecting video");
                     await ctx.CallActivityAsync("A_RejectVideo", withIntroLocation);
                 }
+                ctx.SetCustomStatus("finished");
+
             }
             catch (Exception e)
             {
                 if (!ctx.IsReplaying)
                     log.Info($"Caught an error from an activity: {e.Message}");
 
+                ctx.SetCustomStatus("error: cleaning up");
                 await
                     ctx.CallActivityAsync<string>("A_Cleanup", 
                         new[] { transcodedLocation, thumbnailLocation, withIntroLocation });
+
+                ctx.SetCustomStatus("finished with error");
 
                 return new
                 {
