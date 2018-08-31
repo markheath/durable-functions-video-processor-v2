@@ -14,7 +14,8 @@ To run this locally from Visual Studio you will need to create your own `local.s
     "SendGridKey": "Your-SendGrid-Key-Here",
     "ApproverEmail": "your@email.here",
     "SenderEmail": "any@example.email",
-    "Host": "http://localhost:7071"
+    "Host": "http://localhost:7071",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet" 
   }
 }
 ```
