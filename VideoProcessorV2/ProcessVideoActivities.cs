@@ -1,11 +1,10 @@
 ﻿using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using SendGrid.Helpers.Mail;
 using System;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 
 namespace VideoProcessor
@@ -14,8 +13,7 @@ namespace VideoProcessor
     {
         [FunctionName("A_GetTranscodeBitrates")]
         public static int[] GetTranscodeBitrates(
-                            [ActivityTrigger] object input,
-                            TraceWriter log)
+                            [ActivityTrigger] object input)
         {
             var bitRates = Environment.GetEnvironmentVariable("TranscodeBitrates");
             return bitRates
@@ -27,9 +25,9 @@ namespace VideoProcessor
         [FunctionName("A_TranscodeVideo")]
         public static async Task<VideoFileInfo> TranscodeVideo(
             [ActivityTrigger] VideoFileInfo inputVideo,
-            TraceWriter log)
+            ILogger log)
         {
-            log.Info($"Transcoding {inputVideo.Location} to {inputVideo.BitRate}");
+            log.LogInformation($"Transcoding {inputVideo.Location} to {inputVideo.BitRate}");
             // simulate doing the activity
             await Task.Delay(5000);
 
@@ -46,9 +44,9 @@ namespace VideoProcessor
         [FunctionName("A_ExtractThumbnail")]
         public static async Task<string> ExtractThumbnail(
             [ActivityTrigger] string inputVideo,
-            TraceWriter log)
+            ILogger log)
         {
-            log.Info($"Extracting Thumbnail {inputVideo}");
+            log.LogInformation($"Extracting Thumbnail {inputVideo}");
 
             if (inputVideo.Contains("error"))
             {
@@ -64,9 +62,9 @@ namespace VideoProcessor
         [FunctionName("A_PrependIntro")]
         public static async Task<string> PrependIntro(
             [ActivityTrigger] string inputVideo,
-            TraceWriter log)
+            ILogger log)
         {
-            log.Info($"Appending intro to video {inputVideo}");
+            log.LogInformation($"Appending intro to video {inputVideo}");
             var introLocation = Environment.GetEnvironmentVariable("IntroLocation");
             // simulate doing the activity
             await Task.Delay(5000);
@@ -77,11 +75,11 @@ namespace VideoProcessor
         [FunctionName("A_Cleanup")]
         public static async Task<string> Cleanup(
             [ActivityTrigger] string[] filesToCleanUp,
-            TraceWriter log)
+            ILogger log)
         {
             foreach (var file in filesToCleanUp.Where(f => f != null))
             {
-                log.Info($"Deleting {file}");
+                log.LogInformation($"Deleting {file}");
                 // simulate doing the activity
                 await Task.Delay(1000);
             }
@@ -93,7 +91,7 @@ namespace VideoProcessor
             [ActivityTrigger] ApprovalInfo approvalInfo,
             [SendGrid(ApiKey = "SendGridKey")] out SendGridMessage message,
             [Table("Approvals", "AzureWebJobsStorage")] out Approval approval,
-            TraceWriter log)
+            ILogger log)
         {
             var approvalCode = Guid.NewGuid().ToString("N");
             approval = new Approval
@@ -105,7 +103,7 @@ namespace VideoProcessor
             var approverEmail = new EmailAddress(Environment.GetEnvironmentVariable("ApproverEmail"));
             var senderEmail = new EmailAddress(Environment.GetEnvironmentVariable("SenderEmail"));
             
-            log.Info($"Sending approval request for {approvalInfo.VideoLocation}");
+            log.LogInformation($"Sending approval request for {approvalInfo.VideoLocation}");
             var host = Environment.GetEnvironmentVariable("Host");
 
             var functionAddress = $"{host}/api/SubmitVideoApproval/{approvalCode}";
@@ -119,15 +117,15 @@ namespace VideoProcessor
             message.From = senderEmail;
             message.AddTo(approverEmail);
             message.HtmlContent = body;
-            log.Warning(body);
+            log.LogWarning(body);
         }
 
         [FunctionName("A_PublishVideo")]
         public static async Task PublishVideo(
             [ActivityTrigger] string inputVideo,
-            TraceWriter log)
+            ILogger log)
         {
-            log.Info($"Publishing {inputVideo}");
+            log.LogInformation($"Publishing {inputVideo}");
             // simulate publishing
             await Task.Delay(1000);
         }
@@ -135,9 +133,9 @@ namespace VideoProcessor
         [FunctionName("A_RejectVideo")]
         public static async Task RejectVideo(
             [ActivityTrigger] string inputVideo,
-            TraceWriter log)
+            ILogger log)
         {
-            log.Info($"Rejecting {inputVideo}");
+            log.LogInformation($"Rejecting {inputVideo}");
             // simulate performing reject actions
             await Task.Delay(1000);
         }
@@ -145,9 +143,9 @@ namespace VideoProcessor
         [FunctionName("A_PeriodicActivity")]
         public static void PeriodicActivity(
             [ActivityTrigger] int timesRun,
-            TraceWriter log)
+            ILogger log)
         {
-            log.Warning($"Running the periodic activity, times run = {timesRun}");
+            log.LogWarning($"Running the periodic activity, times run = {timesRun}");
         }
     }
 }

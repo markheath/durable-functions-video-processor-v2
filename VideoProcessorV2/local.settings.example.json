@@ -5,8 +5,9 @@
     "AzureWebJobsDashboard": "UseDevelopmentStorage=true",
     "TranscodeBitRates": "1010,2020,3030",
     "SendGridKey": "Your-SendGrid-Key-Here",
-    "ApproverEmail": "your@email.here",
-    "SenderEmail": "any@example.email",
-    "Host": "http://localhost:7071"
+    "ApproverEmail": "video-approver@mailinator.com",
+    "SenderEmail": "your@email.here",
+    "Host": "http://localhost:7071",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
   }
 }

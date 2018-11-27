@@ -1,10 +1,10 @@
 ﻿using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace VideoProcessor
 {
@@ -13,12 +13,12 @@ namespace VideoProcessor
         [FunctionName("O_ProcessVideo")]
         public static async Task<object> ProcessVideo(
             [OrchestrationTrigger] DurableOrchestrationContext ctx,
-            TraceWriter log)
+            ILogger log)
         {
             var videoLocation = ctx.GetInput<string>();
 
             if (!ctx.IsReplaying)
-                log.Info("About to call transcode video activity");
+                log.LogInformation("About to call transcode video activity");
 
             string transcodedLocation = null;
             string thumbnailLocation = null;
@@ -37,14 +37,14 @@ namespace VideoProcessor
 
                 ctx.SetCustomStatus("extracting thumbnail");
                 if (!ctx.IsReplaying)
-                    log.Info("About to call extract thumbnail");
+                    log.LogInformation("About to call extract thumbnail");
 
                 thumbnailLocation = await
                     ctx.CallActivityAsync<string>("A_ExtractThumbnail", transcodedLocation);
 
                 ctx.SetCustomStatus("prepending intro");
                 if (!ctx.IsReplaying)
-                    log.Info("About to call prepend intro");
+                    log.LogInformation("About to call prepend intro");
 
                 withIntroLocation = await
                     ctx.CallActivityAsync<string>("A_PrependIntro", transcodedLocation);
@@ -91,7 +91,7 @@ namespace VideoProcessor
             catch (Exception e)
             {
                 if (!ctx.IsReplaying)
-                    log.Info($"Caught an error from an activity: {e.Message}");
+                    log.LogInformation($"Caught an error from an activity: {e.Message}");
 
                 ctx.SetCustomStatus("error: cleaning up");
                 await
@@ -120,7 +120,7 @@ namespace VideoProcessor
         [FunctionName("O_TranscodeVideo")]
         public static async Task<VideoFileInfo[]> TranscodeVideo(
             [OrchestrationTrigger] DurableOrchestrationContext ctx,
-            TraceWriter log)
+            ILogger log)
         {
             var videoLocation = ctx.GetInput<string>();
             var bitRates = await ctx.CallActivityAsync<int[]>("A_GetTranscodeBitrates", null);
@@ -140,12 +140,12 @@ namespace VideoProcessor
         [FunctionName("O_PeriodicTask")]
         public static async Task<int> PeriodicTask(
             [OrchestrationTrigger] DurableOrchestrationContext ctx,
-            TraceWriter log)
+            ILogger log)
         {
             var timesRun = ctx.GetInput<int>();
             timesRun++;
             if (!ctx.IsReplaying)
-                log.Info($"Starting the PeriodicTask activity {ctx.InstanceId}, {timesRun}");
+                log.LogInformation($"Starting the PeriodicTask activity {ctx.InstanceId}, {timesRun}");
             await ctx.CallActivityAsync("A_PeriodicActivity", timesRun);
             var nextRun = ctx.CurrentUtcDateTime.AddSeconds(30);
             await ctx.CreateTimer(nextRun, CancellationToken.None);
