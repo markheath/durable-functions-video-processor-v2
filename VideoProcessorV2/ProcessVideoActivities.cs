@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 
 namespace VideoProcessor
 {

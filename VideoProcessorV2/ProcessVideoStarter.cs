@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +14,7 @@ namespace VideoProcessor
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequest req,
-            [OrchestrationClient] DurableOrchestrationClient starter,
+            [DurableClient] IDurableOrchestrationClient starter,
             ILogger log)
         {
             // parse query parameter
@@ -36,7 +37,7 @@ namespace VideoProcessor
         public static async Task<IActionResult> SubmitVideoApproval(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "SubmitVideoApproval/{id}")]
             HttpRequest req,
-            [OrchestrationClient] DurableOrchestrationClient client,
+            [DurableClient] IDurableOrchestrationClient client,
             [Table("Approvals", "Approval", "{id}", Connection = "AzureWebJobsStorage")] Approval approval,
             ILogger log)
         {
@@ -57,12 +58,25 @@ namespace VideoProcessor
         public static async Task<IActionResult> StartPeriodicTask(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequest req,
-            [OrchestrationClient] DurableOrchestrationClient client,
+            [DurableClient] IDurableOrchestrationClient client, 
             ILogger log)
         {
-            var instanceId = await client.StartNewAsync("O_PeriodicTask", 0);
+            var instanceId = "PeriodicTask"; // use a fixed id, making it easier for us to terminate
+            await client.StartNewAsync("O_PeriodicTask", instanceId, 0);
             var payload = client.CreateHttpManagementPayload(instanceId);
             return new OkObjectResult(payload);
+        }
+
+        [FunctionName("StopPeriodicTask")]
+        public static async Task<IActionResult> StopPeriodicTask(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
+            HttpRequest req,
+            [DurableClient] IDurableOrchestrationClient client,
+            ILogger log)
+        {
+            var instanceId = "PeriodicTask"; // use a fixed id, making it easier for us to terminate
+            await client.TerminateAsync(instanceId, "User requested termination");
+            return new OkResult();
         }
     }
 }

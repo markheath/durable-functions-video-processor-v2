@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 
 namespace VideoProcessor
 {
@@ -12,7 +13,7 @@ namespace VideoProcessor
     {
         [FunctionName("O_ProcessVideo")]
         public static async Task<object> ProcessVideo(
-            [OrchestrationTrigger] DurableOrchestrationContext ctx,
+            [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
             var videoLocation = ctx.GetInput<string>();
@@ -119,7 +120,7 @@ namespace VideoProcessor
 
         [FunctionName("O_TranscodeVideo")]
         public static async Task<VideoFileInfo[]> TranscodeVideo(
-            [OrchestrationTrigger] DurableOrchestrationContext ctx,
+            [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
             var videoLocation = ctx.GetInput<string>();
@@ -139,7 +140,7 @@ namespace VideoProcessor
 
         [FunctionName("O_PeriodicTask")]
         public static async Task<int> PeriodicTask(
-            [OrchestrationTrigger] DurableOrchestrationContext ctx,
+            [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
             var timesRun = ctx.GetInput<int>();
