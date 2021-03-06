@@ -16,11 +16,11 @@ namespace VideoProcessor
             [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
+            log = ctx.CreateReplaySafeLogger(log);
             var videoLocation = ctx.GetInput<string>();
 
-            if (!ctx.IsReplaying)
-                log.LogInformation("About to call transcode video activity");
-
+            log.LogInformation("About to call transcode video activity");
+            
             string transcodedLocation = null;
             string thumbnailLocation = null;
             string withIntroLocation = null;
@@ -37,15 +37,13 @@ namespace VideoProcessor
                         .First();
 
                 ctx.SetCustomStatus("extracting thumbnail");
-                if (!ctx.IsReplaying)
-                    log.LogInformation("About to call extract thumbnail");
+                log.LogInformation("About to call extract thumbnail");
 
                 thumbnailLocation = await
                     ctx.CallActivityAsync<string>("A_ExtractThumbnail", transcodedLocation);
 
                 ctx.SetCustomStatus("prepending intro");
-                if (!ctx.IsReplaying)
-                    log.LogInformation("About to call prepend intro");
+                log.LogInformation("About to call prepend intro");
 
                 withIntroLocation = await
                     ctx.CallActivityAsync<string>("A_PrependIntro", transcodedLocation);
@@ -57,23 +55,16 @@ namespace VideoProcessor
                     VideoLocation = withIntroLocation
                 });
 
-                using (var cts = new CancellationTokenSource())
+                ctx.SetCustomStatus("waiting for email response");
+                try
                 {
-                    var timeoutAt = ctx.CurrentUtcDateTime.AddSeconds(30);
-                    var timeoutTask = ctx.CreateTimer(timeoutAt, cts.Token);
-                    var approvalTask = ctx.WaitForExternalEvent<string>("ApprovalResult");
+                    approvalResult = await ctx.WaitForExternalEvent<string>("ApprovalResult", TimeSpan.FromSeconds(30));
 
-                    ctx.SetCustomStatus("waiting for email response");
-                    var winner = await Task.WhenAny(approvalTask, timeoutTask);
-                    if (winner == approvalTask)
-                    {
-                        approvalResult = approvalTask.Result;
-                        cts.Cancel(); // we should cancel the timeout task
-                    }
-                    else
-                    {
-                        approvalResult = "Timed Out";
-                    }
+                }
+                catch (TimeoutException)
+                {
+                    log.LogWarning("Timed out waiting for approval");
+                    approvalResult = "Timed Out";
                 }
 
                 if (approvalResult == "Approved")
@@ -91,8 +82,7 @@ namespace VideoProcessor
             }
             catch (Exception e)
             {
-                if (!ctx.IsReplaying)
-                    log.LogInformation($"Caught an error from an activity: {e.Message}");
+                log.LogError($"Caught an error from an activity: {e.Message}");
 
                 ctx.SetCustomStatus("error: cleaning up");
                 await
@@ -143,10 +133,11 @@ namespace VideoProcessor
             [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
+            log = ctx.CreateReplaySafeLogger(log);
+
             var timesRun = ctx.GetInput<int>();
             timesRun++;
-            if (!ctx.IsReplaying)
-                log.LogInformation($"Starting the PeriodicTask activity {ctx.InstanceId}, {timesRun}");
+            log.LogInformation($"Starting the PeriodicTask activity {ctx.InstanceId}, {timesRun}");
             await ctx.CallActivityAsync("A_PeriodicActivity", timesRun);
             var nextRun = ctx.CurrentUtcDateTime.AddSeconds(30);
             await ctx.CreateTimer(nextRun, CancellationToken.None);

@@ -28,7 +28,7 @@ namespace VideoProcessor
 
             log.LogInformation($"About to start orchestration for {video}");
 
-            var orchestrationId = await starter.StartNewAsync("O_ProcessVideo", video);
+            var orchestrationId = await starter.StartNewAsync("O_ProcessVideo", null, video);
             var payload = starter.CreateHttpManagementPayload(orchestrationId);
             return new OkObjectResult(payload);
         }
