@@ -9,10 +9,10 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 
 namespace VideoProcessor
 {
-    public static class ProcessVideoOrchestrators
+    public static class OrchestratorFunctions
     {
-        [FunctionName("O_ProcessVideo")]
-        public static async Task<object> ProcessVideo(
+        [FunctionName(nameof(ProcessVideoOrchestrator))]
+        public static async Task<object> ProcessVideoOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
@@ -29,7 +29,7 @@ namespace VideoProcessor
             {
                 ctx.SetCustomStatus("transcoding");
                 var transcodeResults =
-                    await ctx.CallSubOrchestratorAsync<VideoFileInfo[]>("O_TranscodeVideo", videoLocation);
+                    await ctx.CallSubOrchestratorAsync<VideoFileInfo[]>(nameof(TranscodeVideoOrchestrator), videoLocation);
 
                 transcodedLocation = transcodeResults
                         .OrderByDescending(r => r.BitRate)
@@ -40,16 +40,16 @@ namespace VideoProcessor
                 log.LogInformation("About to call extract thumbnail");
 
                 thumbnailLocation = await
-                    ctx.CallActivityAsync<string>("A_ExtractThumbnail", transcodedLocation);
+                    ctx.CallActivityAsync<string>(nameof(ActivityFunctions.ExtractThumbnail), transcodedLocation);
 
                 ctx.SetCustomStatus("prepending intro");
                 log.LogInformation("About to call prepend intro");
 
                 withIntroLocation = await
-                    ctx.CallActivityAsync<string>("A_PrependIntro", transcodedLocation);
+                    ctx.CallActivityAsync<string>(nameof(ActivityFunctions.PrependIntro), transcodedLocation);
 
                 ctx.SetCustomStatus("sending approval request email");
-                await ctx.CallActivityAsync("A_SendApprovalRequestEmail", new ApprovalInfo()
+                await ctx.CallActivityAsync(nameof(ActivityFunctions.SendApprovalRequestEmail), new ApprovalInfo()
                 {
                     OrchestrationId = ctx.InstanceId,
                     VideoLocation = withIntroLocation
@@ -70,12 +70,12 @@ namespace VideoProcessor
                 if (approvalResult == "Approved")
                 {
                     ctx.SetCustomStatus("publishing video");
-                    await ctx.CallActivityAsync("A_PublishVideo", withIntroLocation);
+                    await ctx.CallActivityAsync(nameof(ActivityFunctions.PublishVideo), withIntroLocation);
                 }
                 else
                 {
                     ctx.SetCustomStatus("rejecting video");
-                    await ctx.CallActivityAsync("A_RejectVideo", withIntroLocation);
+                    await ctx.CallActivityAsync(nameof(ActivityFunctions.RejectVideo), withIntroLocation);
                 }
                 ctx.SetCustomStatus("finished");
 
@@ -86,7 +86,7 @@ namespace VideoProcessor
 
                 ctx.SetCustomStatus("error: cleaning up");
                 await
-                    ctx.CallActivityAsync<string>("A_Cleanup", 
+                    ctx.CallActivityAsync<string>(nameof(ActivityFunctions.Cleanup), 
                         new[] { transcodedLocation, thumbnailLocation, withIntroLocation });
 
                 ctx.SetCustomStatus("finished with error");
@@ -108,19 +108,19 @@ namespace VideoProcessor
 
         }
 
-        [FunctionName("O_TranscodeVideo")]
-        public static async Task<VideoFileInfo[]> TranscodeVideo(
+        [FunctionName(nameof(TranscodeVideoOrchestrator))]
+        public static async Task<VideoFileInfo[]> TranscodeVideoOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
             var videoLocation = ctx.GetInput<string>();
-            var bitRates = await ctx.CallActivityAsync<int[]>("A_GetTranscodeBitrates", null);
+            var bitRates = await ctx.CallActivityAsync<int[]>(nameof(ActivityFunctions.GetTranscodeBitrates), null);
             var transcodeTasks = new List<Task<VideoFileInfo>>();
 
             foreach (var bitRate in bitRates)
             {
                 var info = new VideoFileInfo() { Location = videoLocation, BitRate = bitRate };
-                var task = ctx.CallActivityAsync<VideoFileInfo>("A_TranscodeVideo", info);
+                var task = ctx.CallActivityAsync<VideoFileInfo>(nameof(ActivityFunctions.TranscodeVideo), info);
                 transcodeTasks.Add(task);
             }
 
@@ -128,8 +128,8 @@ namespace VideoProcessor
             return transcodeResults;
         }
 
-        [FunctionName("O_PeriodicTask")]
-        public static async Task<int> PeriodicTask(
+        [FunctionName(nameof(PeriodicTaskOrchestrator))]
+        public static async Task<int> PeriodicTaskOrchestrator(
             [OrchestrationTrigger] IDurableOrchestrationContext ctx,
             ILogger log)
         {
@@ -138,7 +138,7 @@ namespace VideoProcessor
             var timesRun = ctx.GetInput<int>();
             timesRun++;
             log.LogInformation($"Starting the PeriodicTask activity {ctx.InstanceId}, {timesRun}");
-            await ctx.CallActivityAsync("A_PeriodicActivity", timesRun);
+            await ctx.CallActivityAsync(nameof(ActivityFunctions.PeriodicActivity), timesRun);
             var nextRun = ctx.CurrentUtcDateTime.AddSeconds(30);
             await ctx.CreateTimer(nextRun, CancellationToken.None);
             ctx.ContinueAsNew(timesRun);

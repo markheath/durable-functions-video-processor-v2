@@ -8,10 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace VideoProcessor
 {
-    public static class ProcessVideoStarter
+    /// <summary>
+    /// This class contains all the HTTP endpoints
+    /// </summary>
+    public static class HttpFunctions
     {
-        [FunctionName("ProcessVideoStarter")]
-        public static async Task<IActionResult> Run(
+        [FunctionName(nameof(ProcessVideoStarter))]
+        public static async Task<IActionResult> ProcessVideoStarter(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequest req,
             [DurableClient] IDurableOrchestrationClient starter,
@@ -28,12 +31,12 @@ namespace VideoProcessor
 
             log.LogInformation($"About to start orchestration for {video}");
 
-            var orchestrationId = await starter.StartNewAsync("O_ProcessVideo", null, video);
+            var orchestrationId = await starter.StartNewAsync(nameof(OrchestratorFunctions.ProcessVideoOrchestrator), null, video);
             var payload = starter.CreateHttpManagementPayload(orchestrationId);
             return new OkObjectResult(payload);
         }
 
-        [FunctionName("SubmitVideoApproval")]
+        [FunctionName(nameof(SubmitVideoApproval))]
         public static async Task<IActionResult> SubmitVideoApproval(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "SubmitVideoApproval/{id}")]
             HttpRequest req,
@@ -53,29 +56,30 @@ namespace VideoProcessor
 
             return new OkResult();
         }
+        // use a fixed id, making it easier for us to terminate
+        private const string PeriodicTaskInstanceId = "PeriodicTask"; 
 
-        [FunctionName("StartPeriodicTask")]
+        [FunctionName(nameof(StartPeriodicTask))]
         public static async Task<IActionResult> StartPeriodicTask(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequest req,
             [DurableClient] IDurableOrchestrationClient client, 
             ILogger log)
         {
-            var instanceId = "PeriodicTask"; // use a fixed id, making it easier for us to terminate
-            await client.StartNewAsync("O_PeriodicTask", instanceId, 0);
-            var payload = client.CreateHttpManagementPayload(instanceId);
+            await client.StartNewAsync(nameof(OrchestratorFunctions.PeriodicTaskOrchestrator), PeriodicTaskInstanceId, 0);
+            var payload = client.CreateHttpManagementPayload(PeriodicTaskInstanceId);
             return new OkObjectResult(payload);
         }
 
-        [FunctionName("StopPeriodicTask")]
+        [FunctionName(nameof(StopPeriodicTask))]
         public static async Task<IActionResult> StopPeriodicTask(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)]
             HttpRequest req,
             [DurableClient] IDurableOrchestrationClient client,
             ILogger log)
         {
-            var instanceId = "PeriodicTask"; // use a fixed id, making it easier for us to terminate
-            await client.TerminateAsync(instanceId, "User requested termination");
+            var reason = "User requested termination";
+            await client.TerminateAsync(PeriodicTaskInstanceId, reason);
             return new OkResult();
         }
     }

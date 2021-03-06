@@ -9,9 +9,9 @@ using Microsoft.Azure.WebJobs.Extensions.DurableTask;
 
 namespace VideoProcessor
 {
-    public static class ProcessVideoActivities
+    public static class ActivityFunctions
     {
-        [FunctionName("A_GetTranscodeBitrates")]
+        [FunctionName(nameof(GetTranscodeBitrates))]
         public static int[] GetTranscodeBitrates(
                             [ActivityTrigger] object input)
         {
@@ -22,7 +22,7 @@ namespace VideoProcessor
                         .ToArray();
         }
 
-        [FunctionName("A_TranscodeVideo")]
+        [FunctionName(nameof(TranscodeVideo))]
         public static async Task<VideoFileInfo> TranscodeVideo(
             [ActivityTrigger] VideoFileInfo inputVideo,
             ILogger log)
@@ -41,7 +41,7 @@ namespace VideoProcessor
             };
         }
 
-        [FunctionName("A_ExtractThumbnail")]
+        [FunctionName(nameof(ExtractThumbnail))]
         public static async Task<string> ExtractThumbnail(
             [ActivityTrigger] string inputVideo,
             ILogger log)
@@ -59,7 +59,7 @@ namespace VideoProcessor
             return "thumbnail.png";
         }
 
-        [FunctionName("A_PrependIntro")]
+        [FunctionName(nameof(PrependIntro))]
         public static async Task<string> PrependIntro(
             [ActivityTrigger] string inputVideo,
             ILogger log)
@@ -72,7 +72,7 @@ namespace VideoProcessor
             return "withIntro.mp4";
         }
 
-        [FunctionName("A_Cleanup")]
+        [FunctionName(nameof(Cleanup))]
         public static async Task<string> Cleanup(
             [ActivityTrigger] string[] filesToCleanUp,
             ILogger log)
@@ -86,7 +86,7 @@ namespace VideoProcessor
             return "Cleaned up successfully";
         }
 
-        [FunctionName("A_SendApprovalRequestEmail")]
+        [FunctionName(nameof(SendApprovalRequestEmail))]
         public static void SendApprovalRequestEmail(
             [ActivityTrigger] ApprovalInfo approvalInfo,
             [SendGrid(ApiKey = "SendGridKey")] out SendGridMessage message,
@@ -120,7 +120,7 @@ namespace VideoProcessor
             log.LogWarning(body);
         }
 
-        [FunctionName("A_PublishVideo")]
+        [FunctionName(nameof(PublishVideo))]
         public static async Task PublishVideo(
             [ActivityTrigger] string inputVideo,
             ILogger log)
@@ -130,7 +130,7 @@ namespace VideoProcessor
             await Task.Delay(1000);
         }
 
-        [FunctionName("A_RejectVideo")]
+        [FunctionName(nameof(RejectVideo))]
         public static async Task RejectVideo(
             [ActivityTrigger] string inputVideo,
             ILogger log)
@@ -140,7 +140,7 @@ namespace VideoProcessor
             await Task.Delay(1000);
         }
 
-        [FunctionName("A_PeriodicActivity")]
+        [FunctionName(nameof(PeriodicActivity))]
         public static void PeriodicActivity(
             [ActivityTrigger] int timesRun,
             ILogger log)
