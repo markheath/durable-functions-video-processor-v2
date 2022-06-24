@@ -1,8 +1,7 @@
-﻿namespace VideoProcessor
+﻿namespace VideoProcessor;
+
+public class ApprovalInfo
 {
-    public class ApprovalInfo
-    {
-        public string OrchestrationId { get; set; }
-        public string VideoLocation { get; set; }
-    }
+    public string OrchestrationId { get; set; }
+    public string VideoLocation { get; set; }
 }

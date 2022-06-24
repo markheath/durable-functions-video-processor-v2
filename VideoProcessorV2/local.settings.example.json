@@ -2,7 +2,6 @@
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "AzureWebJobsDashboard": "UseDevelopmentStorage=true",
     "TranscodeBitRates": "1010,2020,3030",
     "SendGridKey": "Your-SendGrid-Key-Here",
     "ApproverEmail": "video-approver@mailinator.com",
